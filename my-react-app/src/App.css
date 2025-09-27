@@ -82,39 +82,6 @@ canvas:active {
   opacity: 0.8;
 }
 
-/* 選手情報パネル */
-.player-info {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 15px 20px;
-  border-radius: 10px;
-  font-size: 14px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(10px);
-  z-index: 1000;
-}
-
-.player-info h3 {
-  margin: 0 0 10px 0;
-  color: #FF6B35;
-}
-
-.player-info .player {
-  margin: 8px 0;
-  padding: 5px;
-  border-radius: 5px;
-}
-
-.player.player1 {
-  background-color: rgba(59, 130, 246, 0.3);
-}
-
-.player.player2 {
-  background-color: rgba(239, 68, 68, 0.3);
-}
 
 /* カメラ配置パターン選択パネル */
 .pattern-selector {
@@ -168,3 +135,118 @@ canvas:active {
   width: 0%;
   transition: width 0.1s ease;
 }
+
+/* フォーカスターゲット表示 */
+.focus-target-label {
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+.focus-target-label span {
+  color: #ffd54f;
+}
+
+/* 汎用ボタン */
+.btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background-color: #4CAF50; color: #fff; }
+.btn-danger { background-color: #f44336; color: #fff; }
+.btn-secondary { background-color: #666; color: #fff; }
+.btn-ghost { background: none; color: #fff; }
+
+/* モーダルオーバーレイ */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.8);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* モーダル本体 */
+.modal-content {
+  width: 600px;
+  max-height: 80vh;
+  background: #2a2a2a;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  color: #fff;
+  overflow-y: auto;
+}
+
+.modal-header { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-bottom: 20px; 
+}
+.modal-title { margin: 0; color: #4CAF50; }
+
+.section-block { margin-bottom: 20px; }
+.section-block h3 { color: #FF6B35; margin: 0 0 10px 0; }
+
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; font-size: 14px; margin-bottom: 5px; }
+
+.text-input, .number-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #555;
+  border-radius: 5px;
+  font-size: 14px;
+  background: #333;
+  color: #fff;
+  box-sizing: border-box;
+}
+.small-input {
+  padding: 4px;
+  border-radius: 3px;
+  background: #222;
+  font-size: 12px;
+}
+.list-scroll { max-height: 200px; overflow-y: auto; }
+.row-box {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: #333;
+  border-radius: 5px;
+  align-items: center;
+}
+.row-box span { min-width: 60px; font-size: 12px; }
+
+.inline-title-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; }
+
+.add-pattern-btn { width: 100%; }
+
+/* JSONアップロードドロップゾーン */
+.upload-dropzone {
+  border: 2px dashed #555;
+  border-radius: 8px;
+  padding: 30px 20px;
+  text-align: center;
+  font-size: 14px;
+  background: rgba(0,0,0,0.3);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.upload-dropzone:hover {
+  background: rgba(0,0,0,0.45);
+  border-color: #4CAF50;
+}
+.upload-dropzone strong { color: #4CAF50; }
+
