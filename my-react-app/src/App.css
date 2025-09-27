@@ -1,0 +1,170 @@
+/* テニスコート3Dアプリケーション用スタイル */
+body { 
+  margin: 0; 
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  overflow: hidden;
+}
+
+canvas { 
+  display: block; 
+  cursor: grab;
+}
+
+canvas:active {
+  cursor: grabbing;
+}
+
+/* カメラ情報パネル */
+.camera-info {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 15px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+}
+
+.camera-info h3 {
+  margin: 0 0 10px 0;
+  color: #FF6B35;
+}
+
+.camera-info .current-camera {
+  font-size: 18px;
+  color: #4CAF50;
+  font-weight: bold;
+}
+
+.camera-details {
+  margin-top: 8px; 
+  font-size: 12px; 
+  opacity: 0.8;
+}
+
+/* 操作説明パネル */
+.controls-info {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 15px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+}
+
+.controls-info h3 {
+  margin: 0 0 10px 0;
+  color: #4CAF50;
+}
+
+.controls-info ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.controls-info li {
+  margin: 5px 0;
+}
+
+.controls-note {
+  margin-top: 10px; 
+  font-size: 12px; 
+  opacity: 0.8;
+}
+
+/* 選手情報パネル */
+.player-info {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 15px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+}
+
+.player-info h3 {
+  margin: 0 0 10px 0;
+  color: #FF6B35;
+}
+
+.player-info .player {
+  margin: 8px 0;
+  padding: 5px;
+  border-radius: 5px;
+}
+
+.player.player1 {
+  background-color: rgba(59, 130, 246, 0.3);
+}
+
+.player.player2 {
+  background-color: rgba(239, 68, 68, 0.3);
+}
+
+/* カメラ配置パターン選択パネル */
+.pattern-selector {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 15px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+}
+
+.pattern-selector h3 {
+  margin: 0 0 10px 0; 
+  color: #FF6B35;
+}
+
+.current-pattern {
+  font-size: 16px; 
+  color: #4CAF50; 
+  font-weight: bold;
+}
+
+.current-spacing {
+  margin-top: 8px; 
+  font-size: 12px; 
+  opacity: 0.8;
+}
+
+/* プログレスバー */
+.progress-bar {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid #4CAF50;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50, #45a049);
+  width: 0%;
+  transition: width 0.1s ease;
+}
