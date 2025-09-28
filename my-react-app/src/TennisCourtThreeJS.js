@@ -6,80 +6,73 @@ class TennisCourtBulletTime {
   constructor(canvas, updateStateCallback) {
     this.canvas = canvas
     this.updateState = updateStateCallback
-
     // コア要素
     this.scene = new THREE.Scene()
-  this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: true })
-  this.renderer.setSize(window.innerWidth, window.innerHeight)
-  // 背景を透明にしてCSSグラデーション(body背景)を活かす
-  this.renderer.setClearColor(0x000000, 0)
+    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: true })
+    this.renderer.setSize(window.innerWidth, window.innerHeight)
+    // 背景を透明にしてCSSグラデーション(body背景)を活かす
+    this.renderer.setClearColor(0x000000, 0)
     this.renderer.shadowMap.enabled = true
     this.clock = new THREE.Clock()
     this.gltfLoader = new GLTFLoader()
-
     // カメラ関連
     this.cameras = []
     this.currentCameraIndex = 0
-    this.currentCameraPattern = 3 // デフォルトパターン
     this.animationMixers = []
-
+    // プレイヤーデフォルト位置（builtinパターン復帰用）
+    this.defaultPlayerPositions = [
+      { x: 0, y: 0, z: -5.9 },
+      { x: 0, y: 0, z: 5.9 }
+    ]
     // フォーカス
     this.currentFocusIndex = 0
-
-    // パターン管理
-    this.customPatterns = []
-    this.activeCustomPattern = null // 適用中のカスタムパターン（優先）
-
-    // ビルトインパターン（インスタンスプロパティ化: トグル状態保持のため）
-    this.cameraPatterns = {
-      1: {
-        description: '高密度配置',
-        autoScaleFOV: true,
-        positions: [
-          { x: 5.485, y: 0.0, z: 0.97 }, { x: 5.485, y: 0.75, z: 0.97 }, { x: 5.485, y: 1.5, z: 0.97 },
-          { x: 5.485, y: 2.25, z: 0.97 }, { x: 5.485, y: 3.0, z: 0.97 }, { x: 5.485, y: 3.75, z: 0.97 },
-          { x: 5.485, y: 4.5, z: 0.97 }, { x: 5.485, y: 5.25, z: 0.97 }, { x: 5.485, y: 6.0, z: 0.97 },
-          { x: 5.485, y: 6.75, z: 0.97 }, { x: 5.485, y: 7.5, z: 0.97 }, { x: 5.485, y: 8.25, z: 0.97 },
-          { x: 5.485, y: 9.0, z: 0.97 }, { x: 5.485, y: 9.75, z: 0.97 }, { x: 5.485, y: 10.5, z: 0.97 },
-          { x: 5.485, y: 11.25, z: 0.97 }, { x: 5.37, y: 11.885, z: 0.97 }, { x: 4.62, y: 11.885, z: 0.97 },
-          { x: 3.87, y: 11.885, z: 0.97 }, { x: 3.12, y: 11.885, z: 0.97 }, { x: 2.37, y: 11.885, z: 0.97 },
-          { x: 1.62, y: 11.885, z: 0.97 }, { x: 0.87, y: 11.885, z: 0.97 }, { x: 0.12, y: 11.885, z: 0.97 },
-          { x: -0.63, y: 11.885, z: 0.97 }, { x: -1.38, y: 11.885, z: 0.97 }, { x: -2.13, y: 11.885, z: 0.97 },
-          { x: -2.88, y: 11.885, z: 0.97 }, { x: -3.63, y: 11.885, z: 0.97 }, { x: -4.38, y: 11.885, z: 0.97 },
-          { x: -5.13, y: 11.885, z: 0.97 }, { x: -5.485, y: 11.49, z: 0.97 }, { x: -5.485, y: 10.74, z: 0.97 },
-          { x: -5.485, y: 9.99, z: 0.97 }, { x: -5.485, y: 9.24, z: 0.97 }, { x: -5.485, y: 8.49, z: 0.97 },
-          { x: -5.485, y: 7.74, z: 0.97 }, { x: -5.485, y: 6.99, z: 0.97 }, { x: -5.485, y: 6.24, z: 0.97 },
-          { x: -5.485, y: 5.49, z: 0.97 }, { x: -5.485, y: 4.74, z: 0.97 }, { x: -5.485, y: 3.99, z: 0.97 },
-          { x: -5.485, y: 3.24, z: 0.97 }, { x: -5.485, y: 2.49, z: 0.97 }, { x: -5.485, y: 1.74, z: 0.97 },
-          { x: -5.485, y: 0.99, z: 0.97 }, { x: -5.485, y: 0.24, z: 0.97 }
-        ]
-      },
-      2: {
-        description: '中密度配置',
-        autoScaleFOV: true,
-        positions: [
-          { x: 5.485, y: 0.0, z: 0.97 }, { x: 5.485, y: 1.5, z: 0.97 }, { x: 5.485, y: 3.0, z: 0.97 },
-          { x: 5.485, y: 4.5, z: 0.97 }, { x: 5.485, y: 6.0, z: 0.97 }, { x: 5.485, y: 7.5, z: 0.97 },
-          { x: 5.485, y: 9.0, z: 0.97 }, { x: 5.485, y: 10.5, z: 0.97 }, { x: 5.37, y: 11.885, z: 0.97 },
-          { x: 3.87, y: 11.885, z: 0.97 }, { x: 2.37, y: 11.885, z: 0.97 }, { x: 0.87, y: 11.885, z: 0.97 },
-          { x: -0.63, y: 11.885, z: 0.97 }, { x: -2.13, y: 11.885, z: 0.97 }, { x: -3.63, y: 11.885, z: 0.97 },
-          { x: -5.13, y: 11.885, z: 0.97 }, { x: -5.485, y: 10.74, z: 0.97 }, { x: -5.485, y: 9.24, z: 0.97 },
-          { x: -5.485, y: 7.74, z: 0.97 }, { x: -5.485, y: 6.24, z: 0.97 }, { x: -5.485, y: 4.74, z: 0.97 },
-          { x: -5.485, y: 3.24, z: 0.97 }, { x: -5.485, y: 1.74, z: 0.97 }, { x: -5.485, y: 0.24, z: 0.97 }
-        ]
-      },
-      3: {
-        description: '低密度配置',
-        autoScaleFOV: true,
-        positions: [
-          { x: 5.485, y: 0.0, z: 0.97 }, { x: 5.485, y: 3.0, z: 0.97 }, { x: 5.485, y: 6.0, z: 0.97 },
-          { x: 5.485, y: 9.0, z: 0.97 }, { x: 5.37, y: 11.885, z: 0.97 }, { x: 2.37, y: 11.885, z: 0.97 },
-          { x: -0.63, y: 11.885, z: 0.97 }, { x: -3.63, y: 11.885, z: 0.97 }, { x: -5.485, y: 10.74, z: 0.97 },
-          { x: -5.485, y: 7.74, z: 0.97 }, { x: -5.485, y: 4.74, z: 0.97 }, { x: -5.485, y: 1.74, z: 0.97 }
-        ]
-      }
+    // === パターン管理統合 ===
+    const builtinDefs = {
+      1: { name: 'カメラ間隔: 0.75m', autoScaleFOV: true, positions: [
+        { x: 5.485, y: 0.0, z: 0.97 }, { x: 5.485, y: 0.75, z: 0.97 }, { x: 5.485, y: 1.5, z: 0.97 },
+        { x: 5.485, y: 2.25, z: 0.97 }, { x: 5.485, y: 3.0, z: 0.97 }, { x: 5.485, y: 3.75, z: 0.97 },
+        { x: 5.485, y: 4.5, z: 0.97 }, { x: 5.485, y: 5.25, z: 0.97 }, { x: 5.485, y: 6.0, z: 0.97 },
+        { x: 5.485, y: 6.75, z: 0.97 }, { x: 5.485, y: 7.5, z: 0.97 }, { x: 5.485, y: 8.25, z: 0.97 },
+        { x: 5.485, y: 9.0, z: 0.97 }, { x: 5.485, y: 9.75, z: 0.97 }, { x: 5.485, y: 10.5, z: 0.97 },
+        { x: 5.485, y: 11.25, z: 0.97 }, { x: 5.37, y: 11.885, z: 0.97 }, { x: 4.62, y: 11.885, z: 0.97 },
+        { x: 3.87, y: 11.885, z: 0.97 }, { x: 3.12, y: 11.885, z: 0.97 }, { x: 2.37, y: 11.885, z: 0.97 },
+        { x: 1.62, y: 11.885, z: 0.97 }, { x: 0.87, y: 11.885, z: 0.97 }, { x: 0.12, y: 11.885, z: 0.97 },
+        { x: -0.63, y: 11.885, z: 0.97 }, { x: -1.38, y: 11.885, z: 0.97 }, { x: -2.13, y: 11.885, z: 0.97 },
+        { x: -2.88, y: 11.885, z: 0.97 }, { x: -3.63, y: 11.885, z: 0.97 }, { x: -4.38, y: 11.885, z: 0.97 },
+        { x: -5.13, y: 11.885, z: 0.97 }, { x: -5.485, y: 11.49, z: 0.97 }, { x: -5.485, y: 10.74, z: 0.97 },
+        { x: -5.485, y: 9.99, z: 0.97 }, { x: -5.485, y: 9.24, z: 0.97 }, { x: -5.485, y: 8.49, z: 0.97 },
+        { x: -5.485, y: 7.74, z: 0.97 }, { x: -5.485, y: 6.99, z: 0.97 }, { x: -5.485, y: 6.24, z: 0.97 },
+        { x: -5.485, y: 5.49, z: 0.97 }, { x: -5.485, y: 4.74, z: 0.97 }, { x: -5.485, y: 3.99, z: 0.97 },
+        { x: -5.485, y: 3.24, z: 0.97 }, { x: -5.485, y: 2.49, z: 0.97 }, { x: -5.485, y: 1.74, z: 0.97 },
+        { x: -5.485, y: 0.99, z: 0.97 }, { x: -5.485, y: 0.24, z: 0.97 }
+      ]},
+      2: { name: 'カメラ間隔: 1.5m', autoScaleFOV: true, positions: [
+        { x: 5.485, y: 0.0, z: 0.97 }, { x: 5.485, y: 1.5, z: 0.97 }, { x: 5.485, y: 3.0, z: 0.97 },
+        { x: 5.485, y: 4.5, z: 0.97 }, { x: 5.485, y: 6.0, z: 0.97 }, { x: 5.485, y: 7.5, z: 0.97 },
+        { x: 5.485, y: 9.0, z: 0.97 }, { x: 5.485, y: 10.5, z: 0.97 }, { x: 5.37, y: 11.885, z: 0.97 },
+        { x: 3.87, y: 11.885, z: 0.97 }, { x: 2.37, y: 11.885, z: 0.97 }, { x: 0.87, y: 11.885, z: 0.97 },
+        { x: -0.63, y: 11.885, z: 0.97 }, { x: -2.13, y: 11.885, z: 0.97 }, { x: -3.63, y: 11.885, z: 0.97 },
+        { x: -5.13, y: 11.885, z: 0.97 }, { x: -5.485, y: 10.74, z: 0.97 }, { x: -5.485, y: 9.24, z: 0.97 },
+        { x: -5.485, y: 7.74, z: 0.97 }, { x: -5.485, y: 6.24, z: 0.97 }, { x: -5.485, y: 4.74, z: 0.97 },
+        { x: -5.485, y: 3.24, z: 0.97 }, { x: -5.485, y: 1.74, z: 0.97 }, { x: -5.485, y: 0.24, z: 0.97 }
+      ]},
+      3: { name: 'カメラ間隔: 3.0m', autoScaleFOV: true, positions: [
+        { x: 5.485, y: 0.0, z: 0.97 }, { x: 5.485, y: 3.0, z: 0.97 }, { x: 5.485, y: 6.0, z: 0.97 },
+        { x: 5.485, y: 9.0, z: 0.97 }, { x: 5.37, y: 11.885, z: 0.97 }, { x: 2.37, y: 11.885, z: 0.97 },
+        { x: -0.63, y: 11.885, z: 0.97 }, { x: -3.63, y: 11.885, z: 0.97 }, { x: -5.485, y: 10.74, z: 0.97 },
+        { x: -5.485, y: 7.74, z: 0.97 }, { x: -5.485, y: 4.74, z: 0.97 }, { x: -5.485, y: 1.74, z: 0.97 }
+      ]}
     }
-
+    this.patterns = Object.entries(builtinDefs).map(([k,v]) => ({
+      id: `builtin-${k}`,
+      legacyId: Number(k),
+      kind: 'builtin',
+      name: v.name,
+      autoScaleFOV: v.autoScaleFOV !== false,
+      positions: v.positions.map(p=>({x:p.x,y:p.y,z:p.z})),
+      players: null
+    }))
+    this.activePatternId = this.patterns[0]?.id || null
     // ライティング
     const ambient = new THREE.AmbientLight(0xffffff, 0.6)
     this.scene.add(ambient)
@@ -96,88 +89,16 @@ class TennisCourtBulletTime {
     directionalLight.shadow.camera.bottom = -15
     this.scene.add(directionalLight)
 
-    // コート生成
+    // テニスコート生成
     this.createTennisCourt()
-
     // イベント
     this.setupEventListeners()
-
     // 非同期プレイヤー&カメラ初期化
     this.setupPlayers()
-
     // ループ開始
     this.animate()
   }
-
-  // ==== カスタムパターン CRUD ====
-  addCustomPattern(pattern) {
-    if (!pattern || !Array.isArray(pattern.positions)) return { ok: false, reason: 'positions 配列が必要' }
-    const name = pattern.name || `Custom-${Date.now()}`
-    if (this.customPatterns.find(p => p.name === name)) return { ok: false, reason: '同名パターンが既に存在' }
-    const normalized = {
-      name,
-      description: pattern.description || '',
-      spacing: pattern.spacing || '',
-      autoScaleFOV: pattern.autoScaleFOV !== false, // デフォルトtrue
-      positions: pattern.positions.map(pos => ({ x: +pos.x || 0, y: +pos.y || 0, z: +pos.z || 0 }))
-    }
-    this.customPatterns.push(normalized)
-    this.updateState && this.updateState({ customPatterns: this.customPatterns.slice() })
-    return { ok: true, name }
-  }
-
-  listPatterns() {
-    const builtins = Object.entries(this.cameraPatterns).map(([id, p]) => ({
-      key: `builtin-${id}`,
-      id: Number(id),
-      type: 'builtin',
-      name: `標準パターン${id}`,
-      description: p.description,
-      count: p.positions.length,
-      autoScaleFOV: p.autoScaleFOV !== false
-    }))
-    const customs = this.customPatterns.map(p => ({
-      key: `custom-${p.name}`,
-      type: 'custom',
-      name: p.name,
-      description: p.description,
-      count: p.positions.length,
-      autoScaleFOV: p.autoScaleFOV !== false
-    }))
-    return [...builtins, ...customs]
-  }
-
-  applyPattern(identifier) {
-    if (typeof identifier === 'number') {
-      if (!this.cameraPatterns[identifier]) return { ok: false, reason: '存在しないビルトインID' }
-      this.currentCameraPattern = identifier
-      this.activeCustomPattern = null
-    } else if (typeof identifier === 'string') {
-      const custom = this.customPatterns.find(p => p.name === identifier)
-      if (!custom) return { ok: false, reason: '存在しないカスタム名' }
-      this.activeCustomPattern = custom
-    } else {
-      return { ok: false, reason: '不正なidentifier' }
-    }
-    this.setupCameraSystem(true)
-    this.updateCameraUI()
-    return { ok: true }
-  }
-
-  deleteCustomPattern(name) {
-    const idx = this.customPatterns.findIndex(p => p.name === name)
-    if (idx === -1) return { ok: false, reason: '対象なし' }
-    const isActive = this.activeCustomPattern && this.activeCustomPattern.name === name
-    this.customPatterns.splice(idx, 1)
-    if (isActive) {
-      this.activeCustomPattern = null
-      this.setupCameraSystem(true)
-    }
-    this.updateState && this.updateState({ customPatterns: this.customPatterns.slice() })
-    this.updateCameraUI()
-    return { ok: true }
-  }
-
+  // ==== テニスコート生成 ====
   createTennisCourt() {
     const courtGroup = new THREE.Group()
 
@@ -194,7 +115,6 @@ class TennisCourtBulletTime {
     court.rotation.x = -Math.PI / 2
     court.receiveShadow = true
     courtGroup.add(court)
-
     // ラインの作成関数
     const createLine = (width, length, x, z) => {
       const lineGeometry = new THREE.PlaneGeometry(width, length)
@@ -205,26 +125,20 @@ class TennisCourtBulletTime {
       line.receiveShadow = true
       return line
     }
-
     // ベースライン（上下）
     courtGroup.add(createLine(COURT_WIDTH_DOUBLES, 0.05, 0, COURT_LENGTH / 2))
     courtGroup.add(createLine(COURT_WIDTH_DOUBLES, 0.05, 0, -COURT_LENGTH / 2))
-
     // サイドライン（ダブルス）
     courtGroup.add(createLine(0.05, COURT_LENGTH, COURT_WIDTH_DOUBLES / 2, 0))
     courtGroup.add(createLine(0.05, COURT_LENGTH, -COURT_WIDTH_DOUBLES / 2, 0))
-
     // サイドライン（シングルス）
     courtGroup.add(createLine(0.05, COURT_LENGTH, COURT_WIDTH_SINGLES / 2, 0))
     courtGroup.add(createLine(0.05, COURT_LENGTH, -COURT_WIDTH_SINGLES / 2, 0))
-
     // サービスライン（上下）
     courtGroup.add(createLine(COURT_WIDTH_SINGLES, 0.05, 0, SERVICE_LENGTH))
     courtGroup.add(createLine(COURT_WIDTH_SINGLES, 0.05, 0, -SERVICE_LENGTH))
-
     // センターライン
     courtGroup.add(createLine(0.05, SERVICE_LENGTH * 2, 0, 0))
-
     // ネットの作成
     const netGeometry = new THREE.BoxGeometry(COURT_WIDTH_DOUBLES, NET_HEIGHT, 0.1)
     const netMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 })
@@ -233,12 +147,94 @@ class TennisCourtBulletTime {
     net.castShadow = true
     net.receiveShadow = true
     courtGroup.add(net)
-
     // センターマーク
     courtGroup.add(createLine(0.05, 0.10, 0, COURT_LENGTH / 2))
     courtGroup.add(createLine(0.05, 0.10, 0, -COURT_LENGTH / 2))
 
     this.scene.add(courtGroup)
+  }
+
+  // ==== パターン統合 CRUD ==== 
+  addCustomPattern(pattern) {
+    if (!pattern || !Array.isArray(pattern.positions)) return { ok:false, reason:'positions 配列が必要'}
+    const name = pattern.name || `Custom-${Date.now()}`
+    if (this.patterns.find(p=>p.name === name)) return { ok:false, reason:'同名パターンが既に存在' }
+    const custom = {
+      id: `custom-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+      kind: 'custom',
+      name,
+      autoScaleFOV: pattern.autoScaleFOV !== false,
+      positions: pattern.positions.map(pos=>({x:+pos.x||0, y:+pos.y||0, z:+pos.z||0})),
+      players: Array.isArray(pattern.players)? pattern.players.slice(0,2).map(pl=>({x:+pl.x||0,y:+pl.y||0,z:+pl.z||0})) : null
+    }
+    this.patterns.push(custom)
+    this.updateState && this.updateState({ customPatterns: this.patterns.filter(p=>p.kind==='custom').map(p=>({...p})) })
+    return { ok:true, name }
+  }
+
+  listPatterns() {
+    return this.patterns.map(p=>({
+      key: p.id,
+      type: p.kind,
+      id: p.kind==='builtin' ? p.legacyId : undefined,
+      name: p.name,
+      autoScaleFOV: p.autoScaleFOV !== false
+    }))
+  }
+
+  applyPattern(identifier) {
+    let target = null
+    if (typeof identifier === 'number') {
+      target = this.patterns.find(p=>p.kind==='builtin' && p.legacyId===identifier)
+    } else if (typeof identifier === 'string') {
+      target = this.patterns.find(p=>p.name===identifier || p.id===identifier)
+    }
+    if (!target) return { ok:false, reason:'パターン未検出' }
+    this.activePatternId = target.id
+    if (target.kind==='builtin') this.resetPlayersToDefault()
+    else if (target.kind==='custom') this.repositionPlayersFromPattern(target)
+    this.setupCameraSystem(true)
+    this.updateCameraUI()
+    return { ok:true }
+  }
+
+  deleteCustomPattern(name) {
+    const idx = this.patterns.findIndex(p=>p.kind==='custom' && p.name===name)
+    if (idx === -1) return { ok:false, reason:'対象なし' }
+    const wasActive = this.patterns[idx].id === this.activePatternId
+    this.patterns.splice(idx,1)
+    if (wasActive) {
+      const fallback = this.patterns.find(p=>p.kind==='builtin') || this.patterns[0] || null
+      this.activePatternId = fallback? fallback.id : null
+      if (fallback) {
+        if (fallback.kind==='builtin') this.resetPlayersToDefault(); else this.repositionPlayersFromPattern(fallback)
+        this.setupCameraSystem(true)
+      } else {
+        this.cameras = []
+      }
+    }
+    this.updateState && this.updateState({ customPatterns: this.patterns.filter(p=>p.kind==='custom').map(p=>({...p})) })
+    this.updateCameraUI()
+    return { ok:true }
+  }
+
+  deleteBuiltinPattern(id) {
+    const idx = this.patterns.findIndex(p=>p.kind==='builtin' && p.legacyId===id)
+    if (idx === -1) return { ok:false, reason:'対象なし' }
+    const wasActive = this.patterns[idx].id === this.activePatternId
+    this.patterns.splice(idx,1)
+    if (wasActive) {
+      const fallback = this.patterns.find(p=>p.kind==='builtin') || this.patterns[0] || null
+      this.activePatternId = fallback? fallback.id : null
+      if (fallback) {
+        if (fallback.kind==='builtin') this.resetPlayersToDefault(); else this.repositionPlayersFromPattern(fallback)
+        this.setupCameraSystem(true)
+      } else {
+        this.cameras = []
+      }
+    }
+    this.updateCameraUI()
+    return { ok:true }
   }
 
   async loadPlayerModel(modelUrl, name, position, rotation) {
@@ -424,10 +420,53 @@ class TennisCourtBulletTime {
     })
   }
 
+  // プレイヤー再配置（カスタムパターン）
+  repositionPlayersFromPattern(pattern) {
+    if (!pattern || !Array.isArray(pattern.players) || pattern.players.length === 0) return
+    if (this.player1Group && pattern.players[0]) {
+      const p1 = pattern.players[0]
+      this.player1Group.position.set(p1.x, p1.y, p1.z)
+    }
+    if (this.player2Group && pattern.players[1]) {
+      const p2 = pattern.players[1]
+      this.player2Group.position.set(p2.x, p2.y, p2.z)
+    }
+    this.updateFocusTargetsPositions()
+  }
+
+  // デフォルト位置に戻す（ビルトイン適用時）
+  resetPlayersToDefault() {
+    if (this.player1Group) {
+      const d1 = this.defaultPlayerPositions[0]
+      this.player1Group.position.set(d1.x, d1.y, d1.z)
+    }
+    if (this.player2Group) {
+      const d2 = this.defaultPlayerPositions[1]
+      this.player2Group.position.set(d2.x, d2.y, d2.z)
+    }
+    this.updateFocusTargetsPositions()
+  }
+
+  updateFocusTargetsPositions() {
+    if (!this.focusTargets || this.focusTargets.length < 2) return
+    // プレイヤー1 / 2 の位置を反映（存在する場合）
+    if (this.player1Group) {
+      this.focusTargets[0].position.copy(this.player1Group.position).add(new THREE.Vector3(0,1.0,0))
+    }
+    if (this.player2Group) {
+      this.focusTargets[1].position.copy(this.player2Group.position).add(new THREE.Vector3(0,1.0,0))
+    }
+  }
+
+
+  getActivePattern() {
+    return this.patterns.find(p=>p.id===this.activePatternId) || null
+  }
 
   setupCameraSystem() {
     if (!this.player1Group) return
-    const activePattern = this.activeCustomPattern || this.cameraPatterns[this.currentCameraPattern]
+    const activePattern = this.getActivePattern()
+    if (!activePattern) return
     const cameraPositions = activePattern.positions || []
     const targetPosition = new THREE.Vector3(0, 1.0, 5.9)
     const cameraCount = cameraPositions.length
@@ -458,60 +497,61 @@ class TennisCourtBulletTime {
       camera.position.set(pos.x, pos.z, pos.y)
       const initialFocus = this.getCurrentFocusTarget()
       camera.lookAt(initialFocus?.position || targetPosition)
-      this.cameras.push({ camera, angle: (i / cameraCount) * Math.PI * 2, name: `カメラ ${i + 1}`, distance, fov: adjustedFOV })
+  this.cameras.push({ camera, angle: (i / cameraCount) * Math.PI * 2, distance, fov: adjustedFOV })
     }
-    console.log(`🎬 カメラ再構築: ${cameraCount}台 (${this.activeCustomPattern ? 'カスタム: ' + this.activeCustomPattern.name : 'パターン' + this.currentCameraPattern})`)
+    console.log(`🎬 カメラ再構築: ${cameraCount}台 (${activePattern.name})`)
     this.updateCameraUI()
   }
 
   updateCameraUI() {
     if (!this.cameras.length) return
     const progress = ((this.currentCameraIndex + 1) / this.cameras.length) * 100
-    const activePattern = this.activeCustomPattern || this.cameraPatterns[this.currentCameraPattern]
+    const activePattern = this.getActivePattern()
+    if (!activePattern) return
     const currentCameraData = this.cameras[this.currentCameraIndex]
     const currentFocus = this.getCurrentFocusTarget()
-    const patternLabel = this.activeCustomPattern ? `カスタム: ${activePattern.name}` : `パターン${this.currentCameraPattern}: ${activePattern.description}`
     this.updateState({
-      currentCamera: `${currentCameraData.name} / ${this.cameras.length}`,
-      cameraDetails: `距離: ${currentCameraData.distance.toFixed(2)}m | FOV: ${currentCameraData.fov.toFixed(1)}°${activePattern.autoScaleFOV === false ? ' (固定)' : ''} | フォーカス: ${currentFocus?.name || 'なし'}`,
-      currentPattern: `${patternLabel} (${this.cameras.length}台)`,
-      currentSpacing: `間隔: ${activePattern.spacing || '-'} `,
-      progressWidth: `${progress}%`,
-      focusTarget: currentFocus?.name || ''
+      currentCamera: `カメラ ${this.currentCameraIndex + 1} / ${this.cameras.length}`,
+      cameraDetails: `距離: ${currentCameraData.distance.toFixed(2)}m | FOV: ${currentCameraData.fov.toFixed(1)}° | フォーカス: ${currentFocus?.name || 'なし'}`,
+      currentPattern: `${activePattern.name}`,
+      progressWidth: `${progress}%`
     })
   }
 
   togglePatternAutoScale(identifier) {
-    // identifier: builtin id (number) or custom name (string)
+    let target = null
     if (typeof identifier === 'number') {
-      const p = this.cameraPatterns[identifier]
-      if (!p) return { ok: false }
-      p.autoScaleFOV = !(p.autoScaleFOV !== false)
-      if (!this.activeCustomPattern && this.currentCameraPattern === identifier) {
-        this.setupCameraSystem()
-      }
-      return { ok: true, value: p.autoScaleFOV !== false }
+      target = this.patterns.find(p=>p.kind==='builtin' && p.legacyId===identifier)
     } else if (typeof identifier === 'string') {
-      const c = this.customPatterns.find(p => p.name === identifier)
-      if (!c) return { ok: false }
-      c.autoScaleFOV = !(c.autoScaleFOV !== false)
-      if (this.activeCustomPattern && this.activeCustomPattern.name === identifier) {
-        this.setupCameraSystem()
-      }
-      this.updateState && this.updateState({ customPatterns: this.customPatterns.slice() })
-      return { ok: true, value: c.autoScaleFOV !== false }
+      target = this.patterns.find(p=>p.name===identifier || p.id===identifier)
     }
-    return { ok: false }
+    if (!target) return { ok:false }
+    target.autoScaleFOV = !(target.autoScaleFOV !== false)
+    if (target.id === this.activePatternId) {
+      this.setupCameraSystem()
+    }
+    if (target.kind==='custom') {
+      this.updateState && this.updateState({ customPatterns: this.patterns.filter(p=>p.kind==='custom').map(p=>({...p})) })
+    }
+    return { ok:true, value: target.autoScaleFOV !== false }
   }
 
   switchCameraPattern() {
-    if (this.activeCustomPattern) {
-      // カスタム適用中は解除してビルトインサイクルへ戻す
-      this.activeCustomPattern = null
-      console.log('🔄 カスタム解除しビルトインへ')
+    const builtins = this.patterns.filter(p=>p.kind==='builtin').sort((a,b)=>a.legacyId-b.legacyId)
+    if (!builtins.length) {
+      console.warn('⚠️ ビルトインパターンが存在しません')
+      return
+    }
+    const active = this.getActivePattern()
+    if (!active || active.kind !== 'builtin') {
+      this.activePatternId = builtins[0].id
+      this.resetPlayersToDefault()
     } else {
-      this.currentCameraPattern = (this.currentCameraPattern % 3) + 1
-      console.log(`🔄 カメラパターン変更: パターン${this.currentCameraPattern}`)
+      const idx = builtins.findIndex(p=>p.id===active.id)
+      const next = builtins[(idx+1)%builtins.length]
+      this.activePatternId = next.id
+      this.resetPlayersToDefault()
+      console.log(`🔄 カメラパターン変更: ${next.name}`)
     }
     this.setupCameraSystem()
   }
@@ -525,20 +565,17 @@ class TennisCourtBulletTime {
           if (this.cameras.length) {
             this.currentCameraIndex = (this.currentCameraIndex - 1 + this.cameras.length) % this.cameras.length
             this.updateCameraUI()
-            console.log(`⬅️ ${this.cameras[this.currentCameraIndex].name}`)
           }
           break
         case 'ArrowRight':
           if (this.cameras.length) {
             this.currentCameraIndex = (this.currentCameraIndex + 1) % this.cameras.length
             this.updateCameraUI()
-            console.log(`➡️ ${this.cameras[this.currentCameraIndex].name}`)
           }
           break
         case 'KeyR':
           this.currentCameraIndex = 0
           this.updateCameraUI()
-          console.log('🔄 リセット')
           break
         case 'KeyP':
           this.switchCameraPattern()
@@ -556,7 +593,7 @@ class TennisCourtBulletTime {
       })
       
       this.renderer.setSize(window.innerWidth, window.innerHeight)
-      console.log(`📱 リサイズ対応: ${window.innerWidth}x${window.innerHeight}`)
+
     }
 
     document.addEventListener('keydown', handleKeyDown)

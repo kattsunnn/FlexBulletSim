@@ -109,11 +109,6 @@ canvas:active {
   font-weight: bold;
 }
 
-.current-spacing {
-  margin-top: 8px; 
-  font-size: 12px; 
-  opacity: 0.8;
-}
 
 /* プログレスバー */
 .progress-bar {
@@ -137,14 +132,6 @@ canvas:active {
 }
 
 /* フォーカスターゲット表示 */
-.focus-target-label {
-  margin-top: 4px;
-  font-size: 12px;
-  opacity: 0.85;
-}
-.focus-target-label span {
-  color: #ffd54f;
-}
 
 /* 汎用ボタン */
 .btn {
@@ -249,4 +236,55 @@ canvas:active {
   border-color: #4CAF50;
 }
 .upload-dropzone strong { color: #4CAF50; }
+
+/* 統合情報パネル */
+.info-panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  max-width: 340px;
+  background: rgba(0,0,0,0.78);
+  color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+  backdrop-filter: blur(10px);
+  font-size: 13px;
+  z-index: 1000;
+  overflow: hidden;
+  transition: width 0.25s ease, height 0.25s ease, opacity 0.25s ease;
+}
+.info-panel.closed {
+  height: auto;
+}
+.info-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: linear-gradient(90deg,#4CAF50 0%, #45a049 100%);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.info-panel-header span { font-size: 14px; }
+.info-panel-header .header-title { flex:1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; }
+.collapse-btn { font-size: 12px; padding: 4px 8px; }
+.info-panel.closed .info-panel-body { display: none; }
+.info-panel.closed .collapse-btn { background: rgba(0,0,0,0.25); }
+.info-panel.closed { width: 200px; }
+.info-panel-body { padding: 10px 14px 16px; }
+.panel-section { margin-bottom: 18px; }
+.panel-section:last-child { margin-bottom: 0; }
+.panel-section h3 { margin: 0 0 8px 0; font-size: 14px; color: #FFB347; }
+.current-camera { font-size: 16px; font-weight: 600; color: #4CAF50; }
+.current-pattern { font-size: 14px; font-weight: 600; color: #4CAF50; }
+.controls-list { margin: 0; padding-left: 18px; }
+.controls-list li { margin: 4px 0; }
+.pattern-list-wrapper::-webkit-scrollbar { width: 6px; }
+.pattern-list-wrapper::-webkit-scrollbar-track { background: rgba(255,255,255,0.06); }
+.pattern-list-wrapper::-webkit-scrollbar-thumb { background: #4CAF50; border-radius: 3px; }
+
+@media (max-width: 640px) {
+  .info-panel { max-width: 90vw; right: 50%; transform: translateX(50%); }
+}
 
