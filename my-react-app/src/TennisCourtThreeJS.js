@@ -12,7 +12,7 @@ class TennisCourtBulletTime {
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: true })
     this.renderer.setSize(window.innerWidth, window.innerHeight)
     // 背景を透明にしてCSSグラデーション(body背景)を活かす
-    this.renderer.setClearColor(0x000000, 0)
+    this.renderer.setClearColor(0x87CEEB, 1)
     this.renderer.shadowMap.enabled = true
     this.clock = new THREE.Clock()
     this.gltfLoader = new GLTFLoader()
@@ -126,6 +126,10 @@ class TennisCourtBulletTime {
   getActivePosition() {
     return this.state.positions.get(this.getActivePositionId())
   }
+  // 全ポジション名の取得
+  getAllPositionNames() {
+    return Array.from(this.state.positions.values()).map(p => p.positionName)
+  }
   // アクティブカメラの取得
   getActiveCamera() {
     return this.state.cameras[this.getActiveCameraId()]
@@ -134,6 +138,7 @@ class TennisCourtBulletTime {
   getActiveFocus() {
     return this.state.players[this.getActiveFocusId()].position
   }
+
 
   // ポジション配列に登録
   addPosition(position) {
@@ -346,10 +351,11 @@ class TennisCourtBulletTime {
   setupUI() {
     const progress = ((this.getActiveCameraId() + 1) / this.state.cameras.length) * 100
     this.updateState({
-      currentCamera: `カメラ ${this.getActiveCameraId() + 1} / ${this.state.cameras.length}`,
-      currentFocus: `フォーカス ${this.getActiveFocusId() + 1} / ${this.state.players.length}`,
+      currentCamera: `${this.getActiveCameraId() + 1} / ${this.state.cameras.length}`,
+      currentFocus: `${this.getActiveFocusId() + 1} / ${this.state.players.length}`,
       currentPosition: `${this.getActivePosition().positionName}`,
-      progress: `${progress}%`
+      progress: `${progress}%`,
+      positionList: this.getAllPositionNames()
     })
   }
   // イベントリスナー設定

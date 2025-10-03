@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import TennisCourtBulletTime from './TennisCourtThreeJS'
+import ControlPanel from './assets/component/ControlPanel.jsx'
 
 function App() {
   // === React状態管理（useState） ===
@@ -14,7 +15,7 @@ function App() {
   const [progress, setProgress] = useState('0%')
   // 現在のフォーカスターゲット表示用
   // カスタム/ビルトイン含むパターン一覧
-  const [patternList, setPatternList] = useState([])
+  const [positionList, setPositionList] = useState([])
   // 統合パネル開閉
   const [infoPanelOpen, setInfoPanelOpen] = useState(true)
   const toggleInfoPanel = () => setInfoPanelOpen(o => !o)
@@ -51,10 +52,7 @@ function App() {
       if (newState.currentFocus) setCurrentFocus(newState.currentFocus)
       if (newState.currentPosition) setCurrentPosition(newState.currentPosition)
       if (newState.progress) setProgress(newState.progress)
-      if (newState.customPatterns) {
-        // Three.js側からカスタムパターン変更通知
-        refreshPatternList()
-      }
+      if (newState.positionList) setPositionList(newState.positionList)
     }
 
     // === Three.jsインスタンス作成 ===
@@ -67,254 +65,27 @@ function App() {
         tennisCourtRef.current.dispose()
         tennisCourtRef.current = null
       }
-      console.log('🧹 Three.jsクリーンアップ')
     }
-  }, []) // 空の依存配列 = マウント時のみ実行
+  }, [])
 
-  // === 配置追加フォーム用イベントハンドラ ===
-  const handleToggleAddPatternForm = () => {
-    const next = !showAddPatternModal
-    setShowAddPatternModal(next)
-    if (!next) { // 閉じるときリセット
-      setImportedPattern(null)
-      setImportError('')
-    }
-  }
-
-  // JSONファイル選択を開く
-  const handleSelectJSON = () => fileInputRef.current?.click()
-
-  // JSONテキストをパースし標準化
-    const parseJSONPatterns = (text) => {
-      const data = JSON.parse(text)
-      const normalizeOne = (p) => {
-        if (!p.patternName) throw new Error('patternName がありません')
-        // positions 優先, 無ければ cameras
-        const raw = Array.isArray(p.positions) ? p.positions : (Array.isArray(p.cameras) ? p.cameras : null)
-        if (!raw || !raw.length) throw new Error('positions / cameras が空です')
-        const pos = raw.map((c, i) => ({ x: +c.x || 0, y: isNaN(+c.y) ? 0.8 : +c.y, z: +c.z || 0 }))
-        const players = Array.isArray(p.players) ? p.players.slice(0,2).map(pl => ({ x: +pl.x || 0, y: +pl.y || 0, z: +pl.z || 0 })) : null
-        return {
-          patternName: p.patternName,
-          autoScaleFOV: p.autoScaleFOV !== false,
-          positions: pos,
-          players
-        }
-      }
-      if (Array.isArray(data.patterns)) {
-        if (!data.patterns.length) throw new Error('patterns 配列が空です')
-        return data.patterns.map(normalizeOne)
-      }
-      return [normalizeOne(data)]
-  }
-
-  const handleJSONFileChange = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      try {
-        setImportError('')
-        const text = reader.result
-          const patterns = parseJSONPatterns(text)
-          setImportedPattern(patterns) // 全件保持
-      } catch (err) {
-        console.error(err)
-        setImportedPattern(null)
-        setImportError(err.message)
-      } finally {
-        e.target.value = '' // 同じファイル再選択用リセット
-      }
-    }
-    reader.readAsText(file, 'utf-8')
-  }
-
-
-
-
-  // ドラッグ&ドロップ対応
-  const handleDrop = (e) => {
-    e.preventDefault()
-    const file = e.dataTransfer.files?.[0]
-    if (!file) return
-    if (!file.name.toLowerCase().endsWith('.json')) {
-      setImportError('JSONファイルをドロップしてください')
-      return
-    }
-    const reader = new FileReader()
-    reader.onload = () => {
-      try {
-        setImportError('')
-        const patterns = parseJSONPatterns(reader.result)
-        setImportedPattern(patterns) // ドロップでも全件保持
-      } catch (err) {
-        setImportedPattern(null)
-        setImportError(err.message)
-      }
-    }
-    reader.readAsText(file, 'utf-8')
-  }
-  const handleDragOver = (e) => { e.preventDefault() }
-
-  // パターン一覧更新
+  // TODO: Three.js クラスから取得し直す実装が無いため簡易スタブ
   const refreshPatternList = () => {
-    if (!tennisCourtRef.current) return
-    try {
-      const list = tennisCourtRef.current.listPatterns()
-      setPatternList(list)
-    } catch (e) {
-      console.warn('パターン一覧取得失敗', e)
-    }
+    // ここで tennisCourtRef.current から一覧取得する想定
+    // setPatternList([...])
   }
 
-  const handleApplyPattern = (item) => {
-    if (!tennisCourtRef.current) return
-    const id = item.type === 'builtin' ? item.id : item.name
-    const res = tennisCourtRef.current.applyPattern(id)
-    if (!res.ok) console.warn('適用失敗', res.reason)
-  }
+  const handlePlay = () => tennisCourtRef.current?.play?.()
+  const handlePause = () => tennisCourtRef.current?.pause?.()
+  const handleReset = () => tennisCourtRef.current?.reset?.()
 
-  const handleDeletePattern = (item) => {
-    if (!tennisCourtRef.current) return
-    if (item.type === 'custom') {
-      if (!window.confirm(`カスタムパターン "${item.name}" を削除しますか？`)) return
-      const res = tennisCourtRef.current.deleteCustomPattern(item.name)
-      if (!res.ok) alert('削除失敗: ' + res.reason)
-    } else if (item.type === 'builtin') {
-      if (!window.confirm(`標準パターン "${item.name}" を削除しますか？`)) return
-      const res = tennisCourtRef.current.deleteBuiltinPattern(item.id)
-      if (!res.ok) alert('削除失敗: ' + (res.reason || '不明'))
-    }
-    refreshPatternList()
-  }
-
-  // === JSXレンダリング ===
   return (
     <>
-      {/* === 統合情報パネル（折りたたみ） === */}
-      <div className={`info-panel ${infoPanelOpen ? 'open' : 'closed'}`}>
-        <div className="info-panel-header" onClick={toggleInfoPanel}>
-          <span className="header-title">📊 Info Panel</span>
-          <button
-            className="collapse-btn btn btn-secondary"
-            onClick={(e) => { e.stopPropagation(); toggleInfoPanel(); }}
-            type="button"
-          >
-            {infoPanelOpen ? '▲' : '▼'}
-          </button>
-        </div>
-        {infoPanelOpen && (
-          <div className="info-panel-body">
-            {/* バレットタイムセクション */}
-            <section className="panel-section">
-              <h3>📹 バレットタイム</h3>
-              <div className="current-camera">{currentCamera}</div>
-              <div className="camera-details">{currentFocus}</div>
-            </section>
-            {/* 操作方法 */}
-            <section className="panel-section">
-              <h3>🎮 操作方法</h3>
-              <ul className="controls-list">
-                <li><strong>←→:</strong> カメラ切替</li>
-                <li><strong>R:</strong> 最初のカメラにリセット</li>
-                <li><strong>P:</strong> 配置パターン切替</li>
-                <li><strong>F:</strong> フォーカス切替</li>
-              </ul>
-              <div className="controls-note">📐 自動スケーリング: 距離に応じてFOV調整</div>
-            </section>
-            {/* 配置パターン */}
-            <section className="panel-section">
-              <h3>📐 配置パターン</h3>
-              <div className="current-pattern">{currentPosition}</div>
-              <button className="add-pattern-btn btn btn-primary" style={{ marginTop: '10px' }} onClick={handleToggleAddPatternForm}>➕ 配置を追加</button>
-              <div className="pattern-list-wrapper" style={{ marginTop: '12px', maxHeight: '200px', overflowY: 'auto', fontSize: '12px' }}>
-                {patternList.map(item => (
-                  <div key={item.key} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                    <span style={{ flex: 1 }}>📐 {item.name}</span>
-                    <button
-                      className="btn btn-secondary"
-                      style={{ padding: '2px 6px' }}
-                      title={item.autoScaleFOV ? '現在: 自動FOV\nクリックで固定FOVに切替' : '現在: 固定FOV\nクリックで自動FOVに切替'}
-                      onClick={() => handleToggleAutoScale(item)}
-                    >
-                      {item.autoScaleFOV ? '自動FOV' : '固定FOV'}
-                    </button>
-                    <button className="btn btn-secondary" style={{ padding: '2px 6px' }} onClick={() => handleApplyPattern(item)}>適用</button>
-                    <button className="btn btn-danger" style={{ padding: '2px 6px' }} onClick={() => handleDeletePattern(item)}>削除</button>
-                  </div>
-                ))}
-                {!patternList.length && <div style={{ opacity: 0.6 }}>パターンなし</div>}
-              </div>
-            </section>
-          </div>
-        )}
+      <canvas ref={canvasRef} className="main-canvas" />
+      <div className="control-panel-wrapper">
+        <ControlPanel state={{ currentCamera, currentFocus, currentPosition, progress, positionList }} />
       </div>
-
-      {/* === アニメーション進行状況バー === */}
-      <div className="progress-bar">
-        <div className="progress-fill" style={{ width: progress }}></div>
-      </div>
-
-      {/* === Three.jsレンダリング用canvas === */}
-      {/* refでcanvas要素への参照を取得、Three.jsがここに3Dシーンを描画 */}
-      <canvas ref={canvasRef} id="c"></canvas>
-
-      {/* === 配置追加モーダルウィンドウ === */}
-      {showAddPatternModal && (
-        <div className="modal-overlay" onDragOver={handleDragOver} onDrop={handleDrop}>
-          <div className="modal-content">
-            <div className="modal-header">
-              <h2 className="modal-title">📐 JSON から配置をインポート</h2>
-              <button className="btn btn-ghost" style={{ fontSize: '24px', padding: 0 }} onClick={handleToggleAddPatternForm}>✖</button>
-            </div>
-            <div className="section-block">
-              <p style={{ fontSize: '13px', lineHeight: 1.6, opacity: 0.85 }}>
-                1. JSONファイルを下のエリアにドラッグ&ドロップ、または「ファイル選択」ボタン<br/>
-                2. プレビューを確認して「追加」<br/>
-                単一パターン もしくは {`{"patterns": [ ... ]}`} 形式の複数パターンJSONに対応します（検出した全パターンを追加）。
-              </p>
-              <div
-                className="upload-dropzone"
-                onClick={handleSelectJSON}
-                style={{ marginBottom: '16px' }}
-              >
-                <strong>📂 ここにJSONをドロップ / クリックして選択</strong>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/json,.json"
-                  style={{ display: 'none' }}
-                  onChange={handleJSONFileChange}
-                />
-              </div>
-              {importError && (
-                <div style={{ color: '#f44336', fontSize: '12px', marginBottom: '10px' }}>
-                  ❌ {importError}
-                </div>
-              )}
-              {importedPattern && Array.isArray(importedPattern) && (
-                <div style={{ background: '#333', padding: '12px', borderRadius: '6px', fontSize: '12px' }}>
-                  <div><strong>検出パターン数:</strong> {importedPattern.length}</div>
-                  {importedPattern.slice(0,3).map((p,i) => (
-                    <div key={i} style={{ marginTop: '6px', padding: '6px', background: '#222', borderRadius: '4px' }}>
-                      <div><strong>{p.patternName}</strong></div>
-                      <div style={{ fontSize: '11px', opacity: 0.8 }}>Cameras: {p.positions.length}{p.players ? ` / Players:${p.players.length}`: ''}</div>
-                    </div>
-                  ))}
-                  {importedPattern.length > 3 && <div style={{ fontSize: '11px', opacity: 0.6, marginTop: '4px' }}>... and {importedPattern.length - 3} more</div>}
-                </div>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={handleToggleAddPatternForm}>❌ キャンセル</button>
-              <button className="btn btn-primary" disabled={!importedPattern} onClick={handleConfirmImportedPattern}>✅ 追加</button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   )
 }
 
-// Appコンポーネントをデフォルトエクスポート
 export default App
