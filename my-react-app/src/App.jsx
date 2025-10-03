@@ -7,11 +7,11 @@ function App() {
   // 現在アクティブなカメラの表示名（例: "カメラ 1 / 12"）
   const [currentCamera, setCurrentCamera] = useState('--')
   // カメラの詳細情報（距離とFOV角度の表示文字列）
-  const [cameraDetails, setCameraDetails] = useState('距離: -- m | FOV: --° | フォーカス: なし')
+  const [currentFocus, setCurrentFocus] = useState('フォーカス: --')
   // 現在選択中のカメラ配置パターン名
-  const [currentPattern, setCurrentPattern] = useState('--')
+  const [currentPosition, setCurrentPosition] = useState('--')
   // アニメーション進行状況を示すプログレスバーの幅（CSSパーセンテージ値）
-  const [progressWidth, setProgressWidth] = useState('0%')
+  const [progress, setProgress] = useState('0%')
   // 現在のフォーカスターゲット表示用
   // カスタム/ビルトイン含むパターン一覧
   const [patternList, setPatternList] = useState([])
@@ -26,6 +26,7 @@ function App() {
   const [importedPattern, setImportedPattern] = useState(null)
   const [importError, setImportError] = useState('')
   const fileInputRef = useRef(null)
+
 
   // === React参照管理（useRef） ===
   // Three.jsレンダリング用のcanvas要素への参照（DOM操作用）
@@ -47,9 +48,9 @@ function App() {
     const updateState = (newState) => {
       // 各プロパティが存在する場合のみ対応するstate setterを呼び出し
       if (newState.currentCamera) setCurrentCamera(newState.currentCamera)
-      if (newState.cameraDetails) setCameraDetails(newState.cameraDetails)
-      if (newState.currentPattern) setCurrentPattern(newState.currentPattern)
-      if (newState.progressWidth) setProgressWidth(newState.progressWidth)
+      if (newState.currentFocus) setCurrentFocus(newState.currentFocus)
+      if (newState.currentPosition) setCurrentPosition(newState.currentPosition)
+      if (newState.progress) setProgress(newState.progress)
       if (newState.customPatterns) {
         // Three.js側からカスタムパターン変更通知
         refreshPatternList()
@@ -57,29 +58,20 @@ function App() {
     }
 
     // === Three.jsインスタンス作成 ===
-    // TennisCourtBulletTimeクラスのインスタンスを作成
-    // 引数: canvas要素、状態更新コールバック関数
     tennisCourtRef.current = new TennisCourtBulletTime(canvasRef.current, updateState)
-    // 初期一覧取得遅延
-    setTimeout(() => refreshPatternList(), 500)
+    setTimeout(() => refreshPatternList(), 500) // 初期一覧取得遅延
     
     // === クリーンアップ関数 ===
-    // コンポーネントアンマウント時やuseEffect再実行時に呼ばれる
     return () => {
-      // Three.jsインスタンスが存在する場合
       if (tennisCourtRef.current) {
-        // リソースを適切に解放（メモリリーク防止）
         tennisCourtRef.current.dispose()
-        // 参照をクリア
         tennisCourtRef.current = null
       }
-      // クリーンアップ完了ログ
       console.log('🧹 Three.jsクリーンアップ')
     }
   }, []) // 空の依存配列 = マウント時のみ実行
 
   // === 配置追加フォーム用イベントハンドラ ===
-  // 配置追加フォームの表示/非表示を切り替える関数
   const handleToggleAddPatternForm = () => {
     const next = !showAddPatternModal
     setShowAddPatternModal(next)
@@ -137,37 +129,8 @@ function App() {
     reader.readAsText(file, 'utf-8')
   }
 
-  // パターン確定（今は Three.js 連携は未実装なのでログ）
-  const handleConfirmImportedPattern = () => {
-    if (!importedPattern || !Array.isArray(importedPattern)) return
-    if (!tennisCourtRef.current) return
-    let added = 0
-    importedPattern.forEach(p => {
-      const pat = {
-        name: p.patternName,
-        autoScaleFOV: p.autoScaleFOV,
-        positions: p.positions.map(c => ({ x: c.x, y: c.y, z: c.z })),
-        players: p.players || null
-      }
-      const res = tennisCourtRef.current.addCustomPattern(pat)
-      if (res.ok) added++
-    })
-    if (added === 0) {
-      setImportError('追加できるパターンがありません')
-      return
-    }
-    refreshPatternList()
-    setShowAddPatternModal(false)
-    setImportedPattern(null)
-  }
 
-  const handleToggleAutoScale = (item) => {
-    if (!tennisCourtRef.current) return
-    const identifier = item.type === 'builtin' ? item.id : item.name
-    const res = tennisCourtRef.current.togglePatternAutoScale(identifier)
-    if (!res.ok) return
-    refreshPatternList()
-  }
+
 
   // ドラッグ&ドロップ対応
   const handleDrop = (e) => {
@@ -246,7 +209,7 @@ function App() {
             <section className="panel-section">
               <h3>📹 バレットタイム</h3>
               <div className="current-camera">{currentCamera}</div>
-              <div className="camera-details">{cameraDetails}</div>
+              <div className="camera-details">{currentFocus}</div>
             </section>
             {/* 操作方法 */}
             <section className="panel-section">
@@ -262,7 +225,7 @@ function App() {
             {/* 配置パターン */}
             <section className="panel-section">
               <h3>📐 配置パターン</h3>
-              <div className="current-pattern">{currentPattern}</div>
+              <div className="current-pattern">{currentPosition}</div>
               <button className="add-pattern-btn btn btn-primary" style={{ marginTop: '10px' }} onClick={handleToggleAddPatternForm}>➕ 配置を追加</button>
               <div className="pattern-list-wrapper" style={{ marginTop: '12px', maxHeight: '200px', overflowY: 'auto', fontSize: '12px' }}>
                 {patternList.map(item => (
@@ -289,7 +252,7 @@ function App() {
 
       {/* === アニメーション進行状況バー === */}
       <div className="progress-bar">
-        <div className="progress-fill" style={{ width: progressWidth }}></div>
+        <div className="progress-fill" style={{ width: progress }}></div>
       </div>
 
       {/* === Three.jsレンダリング用canvas === */}
