@@ -74,15 +74,40 @@ function App() {
     // setPatternList([...])
   }
 
-  const handlePlay = () => tennisCourtRef.current?.play?.()
-  const handlePause = () => tennisCourtRef.current?.pause?.()
-  const handleReset = () => tennisCourtRef.current?.reset?.()
+  const handleImportPosition = (data) => {
+    try {
+      tennisCourtRef.current?.loadJsonPosition?.(data)
+    } catch (e) {
+      console.error('ポジションJSONの取り込みに失敗:', e)
+      alert('ポジションJSONの取り込みに失敗しました')
+    }
+  }
+  const handleDeletePosition = (id) => {
+    try {
+      tennisCourtRef.current?.deletePosition?.(id)
+    } catch (e) {
+      console.error('ポジション削除に失敗:', e)
+      alert('ポジション削除に失敗しました')
+    }
+  }
+
+ const handleSelectPosition = (id) => {
+    try {
+      tennisCourtRef.current?.setActivePositionId?.(id)
+    } catch (e) {
+      console.error('ポジション選択に失敗:', e)
+      alert('ポジション選択に失敗しました')
+    }
+  }
 
   return (
     <>
       <canvas ref={canvasRef} className="main-canvas" />
       <div className="control-panel-wrapper">
-        <ControlPanel state={{ currentCamera, currentFocus, currentPosition, progress, positionList }} />
+        <ControlPanel 
+          state={{ currentCamera, currentFocus, currentPosition, progress, positionList }}
+          handle={{handleImportPosition, handleDeletePosition, handleSelectPosition}} 
+        />
       </div>
     </>
   )

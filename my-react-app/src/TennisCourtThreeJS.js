@@ -2,6 +2,7 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { nodeArray } from 'three/src/nodes/TSL.js'
+import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js' // 新: clone を利用
 
 class TennisCourtBulletTime {
   constructor(canvas, updateStateCallback) {
@@ -21,6 +22,7 @@ class TennisCourtBulletTime {
       cameras: [],
       players: [],
       positions: new Map(),
+      positionOrder: [],
       activeCameraId: 0,
       activeFocusId: 0,
       activePositionId: 0,
@@ -49,7 +51,7 @@ class TennisCourtBulletTime {
           { x: -5.485, y: 0.97, z: 3.24 }, { x: -5.485, y: 0.97, z: 2.49 }, { x: -5.485, y: 0.97, z: 1.74 },
           { x: -5.485, y: 0.97, z: 0.99 }, { x: -5.485, y: 0.97, z: 0.24 }],
         players: [
-          { x: 0, y: 0, z: -5.9 }, { x: 0, y: 0, z: 5.9 }]
+          { x: 0, y: 0, z: -5.9 }, { x: 0, y: 0, z: 5.9, rot: 180 }]
       },
       {
         positionName: 'カメラ間隔: 1.5m', 
@@ -64,7 +66,7 @@ class TennisCourtBulletTime {
           { x: -5.485, y: 0.97, z: 7.74 }, { x: -5.485, y: 0.97, z: 6.24 }, { x: -5.485, y: 0.97, z: 4.74 },
           { x: -5.485, y: 0.97, z: 3.24 }, { x: -5.485, y: 0.97, z: 1.74 }, { x: -5.485, y: 0.97, z: 0.24 }],
         players: [
-          { x: 0, y: 0, z: -5.9 }, { x: 0, y: 0, z: 5.9 }]  
+          { x: 0, y: 0, z: -5.9 }, { x: 0, y: 0, z: 5.9, rot: 180 }]  
       },
       {
         positionName: 'カメラ間隔: 3.0m', 
@@ -75,7 +77,7 @@ class TennisCourtBulletTime {
           { x: -0.63, y: 0.97, z: 11.885 }, { x: -3.63, y: 0.97, z: 11.885 }, { x: -5.485, y: 0.97, z: 10.74 },
           { x: -5.485, y: 0.97, z: 7.74 }, { x: -5.485, y: 0.97, z: 4.74 }, { x: -5.485, y: 0.97, z: 1.74 }],
         players: [
-          { x: 0, y: 0, z: -5.9 }, { x: 0, y: 0, z: 5.9 }]      
+          { x: 0, y: 0, z: -6.5 }, { x: 0, y: 0, z: 6.5, rot: 180 }]      
       }
     ]
     // デフォルトポジション登録
@@ -115,7 +117,7 @@ class TennisCourtBulletTime {
   // アクティブフォーカスID
   setActiveFocusId(id) {
     this.state.activeFocusId = id
-    this.changeFocus() // フォーカス変更
+    this.changeFocus()
     this.setupUI() // UI更新
   }
   getActiveFocusId() {
@@ -127,22 +129,26 @@ class TennisCourtBulletTime {
     return this.state.positions.get(this.getActivePositionId())
   }
   // 全ポジション名の取得
-  getAllPositionNames() {
-    return Array.from(this.state.positions.values()).map(p => p.positionName)
+  getAllPositions() {
+    return Array.from(this.state.positions.entries()).map(([id, p]) => ({
+      id,
+      name: p.positionName
+    }))
   }
+
   // アクティブカメラの取得
   getActiveCamera() {
     return this.state.cameras[this.getActiveCameraId()]
   }
   // アクティブフォーカスの取得
   getActiveFocus() {
-    return this.state.players[this.getActiveFocusId()].position
+    const basePos = this.state.players[this.getActiveFocusId()].position;
+    return new THREE.Vector3(basePos.x, basePos.y + 0.9, basePos.z);
   }
-
 
   // ポジション配列に登録
   addPosition(position) {
-    if(!position.positionName) throw new Error(`patternName がありません`)
+    if(!position.positionName) throw new Error(`positionName がありません`)
     if(!position.cameras) throw new Error(`cameras がありません`)
     if(!position.players) throw new Error(`players がありません`)
 
@@ -154,20 +160,28 @@ class TennisCourtBulletTime {
       cameras: position.cameras,
       players: position.players
     })
+    this.state.positionOrder.push(id)
   }
   // Json形式のポジションデータをポジション配列に追加
-  loadJsonPosition(jsonData) {
+  loadJsonPosition(data) {
     try {
       // 文字列で渡された場合はオブジェクトにパース
-      const position = (typeof jsonData === "string") 
-        ? JSON.parse(jsonData) 
-        : jsonData
+      const position = (typeof data === "string") 
+        ? JSON.parse(data) 
+        : data
       // addPositionを利用して登録
       this.addPosition(position)
+      this.setupUI() // UI更新
       console.log(`✅ ポジション追加: ${position.positionName}`)
     } catch (error) {
-        console.error("⚠️ JSON読み込みエラー:", error)
+      console.error("⚠️ JSON読み込みエラー:", error)
     }
+  }
+
+  deletePosition(id) {
+    this.state.positions.delete(id)
+    this.state.positionOrder = this.state.positionOrder.filter(pid => pid !== id)
+    this.setupUI() // UI更新
   }
 
   // ==== ライティング設定 ====
@@ -298,35 +312,48 @@ class TennisCourtBulletTime {
     if (!activePosition) return
     const cameraPositions = activePosition.cameras
     const playerPositions = activePosition.players
+    const autoScaleFOV = activePosition.autoScaleFOV
     // プレイヤーの設定
     this.state.players.forEach(p => this.scene.remove(p))
     this.state.players = [] // プレイヤーをリセット
     // プレイヤーを生成
     for (let i = 0; i < playerPositions.length; i++) {
       const p = playerPositions[i]
-      const player = this.basePlayerModel.clone()
-      player.position.set(p.x, p.y, p.z)
-      player.rotation.y = 0 // Y軸回転が必要なら渡す
-      this.state.players.push(player)
-      this.scene.add(player) // シーンに追加
+      const anchor = new THREE.Group()
+      const clone = cloneSkinned(this.basePlayerModel)
+      clone.position.set(0, 0, 0) // アンカー原点に配置
+      anchor.add(clone)
+      anchor.position.set(p.x, p.y, p.z)
+      anchor.rotation.y = THREE.MathUtils.degToRad(p.rot || 0)
+      this.state.players.push(anchor)
+      this.scene.add(anchor)
     }
     // カメラの設定
-    this.state.cameras.forEach(c => this.scene.remove(c.camera))
+    this.state.cameras.forEach(c => this.scene.remove(c))
     this.state.cameras = [] // カメラをリセット
     this.setActiveCameraId(0) // アクティブカメラをリセット
     this.setActiveFocusId(0) //アクティブフォーカスをリセット
     const focus = this.getActiveFocus() // 視線方向を最初のプレイヤーに設定
-    const fixedFOV = 60 // FOVを設定
+    const baseFOV = 60 // FOVを設定
+    const baseDistance = 7 // 基準距離
+    const baseH = 2 * baseDistance * Math.tan(THREE.MathUtils.degToRad(baseFOV) / 2)  // 基準距離での高さ
     // カメラの生成
     for (let i = 0; i < cameraPositions.length; i++) {
       const pos = cameraPositions[i]
       const camera = new THREE.PerspectiveCamera(
-        fixedFOV,
+        baseFOV,
         window.innerWidth / window.innerHeight,
         0.1,
         1000
       )
       camera.position.set(pos.x, pos.y, pos.z) // カメラの位置設定
+      // 自動FOV調整
+      if (autoScaleFOV) {
+      const distance = camera.position.distanceTo(focus);
+      const scaledFOV = 2 * Math.atan(baseH / (2 * distance));
+      camera.fov = THREE.MathUtils.radToDeg(scaledFOV);
+      camera.updateProjectionMatrix();
+      }
       camera.lookAt(focus) // カメラの視線設定
       this.state.cameras.push(camera) // カメラを配列に追加
       this.scene.add(camera) // シーンに追加
@@ -336,9 +363,18 @@ class TennisCourtBulletTime {
   // フォーカスを切り替え
   changeFocus(){
     const activeFocus = this.getActiveFocus()
-    if (!activeFocus) return
+    const autoScaleFOV = this.getActivePosition().autoScaleFOV
 
     this.state.cameras.forEach(cam => {
+      if (autoScaleFOV) {
+        const baseFOV = 60 // FOVを設定
+        const baseDistance = 7 // 基準距離
+        const baseH = 2 * baseDistance * Math.tan(THREE.MathUtils.degToRad(baseFOV) / 2)  // 基準距離での高さ
+        const distance = cam.position.distanceTo(activeFocus);
+        const scaledFOV = 2 * Math.atan(baseH / (2 * distance));
+        cam.fov = THREE.MathUtils.radToDeg(scaledFOV);
+        cam.updateProjectionMatrix();
+      }
       cam.lookAt(activeFocus)
     })
   }
@@ -355,7 +391,7 @@ class TennisCourtBulletTime {
       currentFocus: `${this.getActiveFocusId() + 1} / ${this.state.players.length}`,
       currentPosition: `${this.getActivePosition().positionName}`,
       progress: `${progress}%`,
-      positionList: this.getAllPositionNames()
+      positionList: this.getAllPositions()
     })
   }
   // イベントリスナー設定
@@ -363,19 +399,22 @@ class TennisCourtBulletTime {
     const handleKeyDown = (event) => {
       switch(event.code) {
         case 'ArrowLeft':
-            this.setActiveCameraId((this.getActiveCameraId() - 1 + this.state.cameras.length) % this.state.cameras.length)
+          this.setActiveCameraId((this.getActiveCameraId() - 1 + this.state.cameras.length) % this.state.cameras.length)
           break
         case 'ArrowRight':
-            this.setActiveCameraId((this.getActiveCameraId() + 1) % this.state.cameras.length)
+          this.setActiveCameraId((this.getActiveCameraId() + 1) % this.state.cameras.length)
           break
         case 'KeyR':
-            this.setActiveCameraId(0)
+          this.setActiveCameraId(0)
           break
         case 'KeyP':
-            this.setActivePositionId((this.getActivePositionId() + 1) % this.state.positions.size)
+          const order = this.state.positionOrder
+          const currentIndex = order.indexOf(this.getActivePositionId())
+          const nextIndex = (currentIndex + 1) % order.length
+          this.setActivePositionId(order[nextIndex])
           break
         case 'KeyF':
-            this.setActiveFocusId((this.getActiveFocusId() + 1) % this.state.players.length)
+          this.setActiveFocusId((this.getActiveFocusId() + 1) % this.state.players.length)
           break
       }
     }

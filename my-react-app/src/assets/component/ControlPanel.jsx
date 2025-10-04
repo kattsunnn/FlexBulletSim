@@ -8,6 +8,7 @@ import Divider from '@mui/material/Divider';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
+import ListItemButton from '@mui/material/ListItemButton';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import Dialog from '@mui/material/Dialog';
@@ -31,6 +32,7 @@ const accordionStyle = {
   borderRadius: 3,
   boxShadow: 3,
   overflow: 'hidden',
+
 };
 
 const summaryStyle = {
@@ -39,18 +41,82 @@ const summaryStyle = {
   '& .MuiTypography-root': { fontWeight: 'bold' },
 };
 
-export default function ControlPanel({ state }) {
+export default function ControlPanel({ state, handle }) {
   const { currentCamera, currentFocus, currentPosition, progress, positionList } = state;
-
+  const { handleImportPosition, handleDeletePosition, handleSelectPosition } = handle;
   // 🔑 ダイアログの開閉状態を管理
   const [open, setOpen] = React.useState(false);
+  const [isDragOver, setIsDragOver] = React.useState(false);
   const [newPosition, setNewPosition] = React.useState('');
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
+  const handleFile = async (file) => {
+    if (file && file.type === "application/json") {
+      const text = await file.text();
+      try {
+        const json = JSON.parse(text);// JSONパース
+        setNewPosition(JSON.stringify(json, null, 2)); // 整形して表示
+      } catch (err) {
+        alert("JSONの読み込みに失敗しました");
+      }
+    } else {
+      alert("JSONファイルを選択してください");
+    }
+  };
+
+
+
+  const handleSave = () => {
+    try {
+      if (!newPosition) return;
+      const data = JSON.parse(newPosition)
+      handleImportPosition?.(data);
+      setOpen(false);
+      setNewPosition('');
+    } catch (e) {
+      alert('JSONが不正です');
+      console.error(e);
+    }
+  };
+
+  const handleSelect = (id) => () => {
+    handleSelectPosition?.(id);
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm('本当に削除しますか？')) {
+      handleDeletePosition?.(id);
+    }
+  };
+
   return (
     <>
+    <Accordion defaultExpanded sx={accordionStyle}>
+      <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />} sx={summaryStyle}>
+        <Typography variant="subtitle1">操作方法</Typography>
+      </AccordionSummary>
+      <AccordionDetails sx={{ bgcolor: 'grey.50', p: 2 }}>
+        <Typography variant="body2" paragraph>
+          🎥 <b>ポジション追加：</b>  
+          JSONファイルをドラッグ＆ドロップ、またはクリックで選択して読み込みます。
+        </Typography>
+        <Typography variant="body2" paragraph>
+          🗑️ <b>削除：</b>  
+          各ポジション右端の <DeleteIcon fontSize="small" /> ボタンをクリックすると削除できます。
+        </Typography>
+        <Typography variant="body2" paragraph>
+          ⚙️ <b>設定：</b>  
+          <SettingsIcon fontSize="small" /> ボタンからポジションの設定を変更できます（※開発予定）。
+        </Typography>
+        <Typography variant="body2">
+          🖱️ <b>選択：</b>  
+          リスト内の項目をクリックすると、そのポジションがアクティブになります。
+        </Typography>
+      </AccordionDetails>
+    </Accordion>
+
     <Accordion defaultExpanded sx={accordionStyle}>
       {/* タイトル部分 */}
       <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />} sx={summaryStyle}>
@@ -80,14 +146,15 @@ export default function ControlPanel({ state }) {
 
         {/* ポジション一覧 */}
         <Box>
-          <Typography >ポジション一覧</Typography>
+          <Typography variant="body2" color="text.secondary">ポジション一覧</Typography>
 
           {positionList && positionList.length > 0 ? (
             <List dense>
-              {positionList.map((name, idx) => (
+              {positionList.map((pos) => (
                 <ListItem 
-                    key={idx}
+                    key={pos.id}
                     divider
+                    onClick={handleSelect(pos.id)}
                     secondaryAction={
                         <>
                         {/* 設定ボタン */}
@@ -96,9 +163,8 @@ export default function ControlPanel({ state }) {
                             aria-label="settings"
                             sx={{ ml: 0.2 }}
                             onClick={(e) => {
-                            e.stopPropagation();
-                            console.log(`設定変更: ${name}`);
-                            // ここに設定変更処理を追加
+                              e.stopPropagation();
+                              handleDelete(pos.id);
                             }}
                         >
                             <SettingsIcon />
@@ -110,8 +176,8 @@ export default function ControlPanel({ state }) {
                             aria-label="delete"
                             sx={{ ml: 0.2}}
                             onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete(idx);
+                              e.stopPropagation();
+                              handleDelete(pos.id);
                             }}
                         >
                             <DeleteIcon />
@@ -119,7 +185,9 @@ export default function ControlPanel({ state }) {
                         </>
                     }
                 >
-                  <ListItemText primary={name} />
+                  <ListItemButton onClick={handleSelect(pos.id)}>
+                  <ListItemText primary={pos.name} />
+                  </ListItemButton>
                 </ListItem>
               ))}
             </List>
@@ -133,21 +201,61 @@ export default function ControlPanel({ state }) {
     </Accordion>
 
     {/* 📌 ダイアログ */}
-    <Dialog open={open} onClose={handleClose}>
+    <Dialog open={open} onClose={handleClose} >
     <DialogTitle>ポジション追加</DialogTitle>
     <DialogContent>
-        <TextField
-        autoFocus
-        margin="dense"
-        label="ポジション名"
-        fullWidth
-        value={newPosition}
-        onChange={(e) => setNewPosition(e.target.value)}
-        />
+      {/* ドラッグ&ドロップ / クリック領域 */}
+      <Box
+        onDrop={(e) => { 
+          e.preventDefault();
+          setIsDragOver(false);
+          handleFile(e.dataTransfer.files[0])
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragOver(true);
+        }}
+        onDragLeave={(e) => {
+          setIsDragOver(false);
+        }}
+        sx={{
+          border: "2px dashed gray",
+          borderRadius: 2,
+          p: 4,
+          textAlign: "center",
+          cursor: "pointer",
+          "&:hover": { bgcolor: "grey.300" },
+          width: "50vw"
+        }}
+        onClick={() => document.getElementById("fileInput").click()}
+      >
+        <Typography variant="body1" color="textSecondary">
+          ドラッグ&ドロップ<br /> 
+          または<br />
+          クリックして選択
+        </Typography>
+      </Box>
+
+      {/* 非表示のファイル入力 */}
+      <input
+        id="fileInput"
+        type="file"
+        accept="application/json"
+        style={{ display: "none" }}
+        onChange={(e) => handleFile(e.target.files[0])}
+      />
+
+      {/* 読み込んだ内容を表示 */}
+      {newPosition && (
+        <Box mt={2} p={2} sx={{ bgcolor: "grey.100", borderRadius: 1 }}>
+          <Typography variant="caption">読み込んだJSON:</Typography>
+          <pre style={{ maxHeight: 200, overflow: "auto" }}>{newPosition}</pre>
+        </Box>
+      )}
     </DialogContent>
     <DialogActions>
         <Button onClick={handleClose}>キャンセル</Button>
-        <Button variant="contained" >保存</Button>
+        <Button variant="contained" onClick={handleSave}>保存</Button>
     </DialogActions>
     </Dialog>
   </>
