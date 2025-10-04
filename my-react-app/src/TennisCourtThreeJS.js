@@ -132,7 +132,8 @@ class TennisCourtBulletTime {
   getAllPositions() {
     return Array.from(this.state.positions.entries()).map(([id, p]) => ({
       id,
-      name: p.positionName
+      positionName: p.positionName,
+      autoScaleFOV: p.autoScaleFOV
     }))
   }
 
@@ -349,10 +350,13 @@ class TennisCourtBulletTime {
       camera.position.set(pos.x, pos.y, pos.z) // カメラの位置設定
       // 自動FOV調整
       if (autoScaleFOV) {
-      const distance = camera.position.distanceTo(focus);
-      const scaledFOV = 2 * Math.atan(baseH / (2 * distance));
-      camera.fov = THREE.MathUtils.radToDeg(scaledFOV);
-      camera.updateProjectionMatrix();
+        const distance = camera.position.distanceTo(focus);
+        const scaledFOV = 2 * Math.atan(baseH / (2 * distance));
+        camera.fov = THREE.MathUtils.radToDeg(scaledFOV);
+        camera.updateProjectionMatrix();
+      } else {
+        camera.fov = baseFOV
+        camera.updateProjectionMatrix();
       }
       camera.lookAt(focus) // カメラの視線設定
       this.state.cameras.push(camera) // カメラを配列に追加
@@ -374,14 +378,21 @@ class TennisCourtBulletTime {
         const scaledFOV = 2 * Math.atan(baseH / (2 * distance));
         cam.fov = THREE.MathUtils.radToDeg(scaledFOV);
         cam.updateProjectionMatrix();
+      } else {
+        cam.fov = 60
+        cam.updateProjectionMatrix();
       }
+
       cam.lookAt(activeFocus)
     })
   }
   // フォーカスモードの切り替え
-  toggleFOVMode() {
-    const activePosition = this.getActivePosition()
-
+  toggleFOVMode(id) {
+    this.state.positions.get(id).autoScaleFOV = !this.state.positions.get(id).autoScaleFOV
+    if (id === this.getActivePositionId()) {
+      this.changeFocus()
+    }
+    this.setupUI()
   }
   // UIを更新
   setupUI() {

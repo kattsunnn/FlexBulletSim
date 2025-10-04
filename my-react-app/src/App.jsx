@@ -100,13 +100,22 @@ function App() {
     }
   }
 
+  const handleToggleFOVMode = (id) => {
+    try {
+      tennisCourtRef.current?.toggleFOVMode?.(id)
+    } catch (e) {
+      console.error('FOVモード切替に失敗:', e)
+      alert('FOVモード切替に失敗しました')
+    }
+  }
+
   return (
     <>
       <canvas ref={canvasRef} className="main-canvas" />
       <div className="control-panel-wrapper">
         <ControlPanel 
           state={{ currentCamera, currentFocus, currentPosition, progress, positionList }}
-          handle={{handleImportPosition, handleDeletePosition, handleSelectPosition}} 
+          handle={{handleImportPosition, handleDeletePosition, handleSelectPosition, handleToggleFOVMode}} 
         />
       </div>
     </>

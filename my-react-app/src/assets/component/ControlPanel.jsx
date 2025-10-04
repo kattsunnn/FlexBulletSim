@@ -43,7 +43,7 @@ const summaryStyle = {
 
 export default function ControlPanel({ state, handle }) {
   const { currentCamera, currentFocus, currentPosition, progress, positionList } = state;
-  const { handleImportPosition, handleDeletePosition, handleSelectPosition } = handle;
+  const { handleImportPosition, handleDeletePosition, handleSelectPosition, handleToggleFOVMode } = handle;
   // 🔑 ダイアログの開閉状態を管理
   const [open, setOpen] = React.useState(false);
   const [isDragOver, setIsDragOver] = React.useState(false);
@@ -85,11 +85,17 @@ export default function ControlPanel({ state, handle }) {
     handleSelectPosition?.(id);
   };
 
+  const handleToggleFOV = (id) => {
+    handleToggleFOVMode?.(id);
+  }
+
   const handleDelete = (id) => {
     if (window.confirm('本当に削除しますか？')) {
       handleDeletePosition?.(id);
     }
   };
+
+
 
   return (
     <>
@@ -158,17 +164,21 @@ export default function ControlPanel({ state, handle }) {
                     secondaryAction={
                         <>
                         {/* 設定ボタン */}
-                        <IconButton
+                        <Button
+                            variant="contained"
+                            size="small"  
                             edge="end"
                             aria-label="settings"
-                            sx={{ ml: 0.2 }}
+                            sx={{ 
+                              ml: 0.2
+                            }}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDelete(pos.id);
+                              handleToggleFOV(pos.id);
                             }}
                         >
-                            <SettingsIcon />
-                        </IconButton>
+                            {pos.autoScaleFOV ? "Auto" : "Fixed"}
+                        </Button>
 
                         {/* 削除ボタン */}
                         <IconButton
@@ -186,7 +196,7 @@ export default function ControlPanel({ state, handle }) {
                     }
                 >
                   <ListItemButton onClick={handleSelect(pos.id)}>
-                  <ListItemText primary={pos.name} />
+                  <ListItemText primary={pos.positionName} />
                   </ListItemButton>
                 </ListItem>
               ))}
