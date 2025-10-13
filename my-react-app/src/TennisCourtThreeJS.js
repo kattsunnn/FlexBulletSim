@@ -28,6 +28,10 @@ class TennisCourtBulletTime {
       activePositionId: 0,
       nextPositionId: 0
     }
+    this.playerMixers = []
+    this.playerActions = []
+    this.baseAnimations = []
+    this.idleAnimation = null
     //デフォルトポジション
     const defaultPositions = [
       { 
@@ -272,6 +276,22 @@ class TennisCourtBulletTime {
         )
       })
       const model = gltf.scene
+
+      // アニメーションを保存（重要）
+      this.baseAnimations = gltf.animations
+      console.log('利用可能なアニメーション:', this.baseAnimations.map(a => a.name))
+      // setupPosition内でIdleアニメーションを取得
+      if (this.baseAnimations.length > 0) {
+        this.idleAnimation = this.baseAnimations.find(anim =>
+          anim.name.toLowerCase().includes('idle') ||
+          anim.name.toLowerCase().includes('wait') ||
+          anim.name.toLowerCase().includes('breathing')
+        ) || this.baseAnimations[0] // 見つからなければ最初のアニメーション
+      }
+      if (this.idleAnimation) {
+        console.log('setupPositionで取得したIdleアニメーション:', this.idleAnimation.name)
+      }
+
       // モデルのスケール調整
       const box = new THREE.Box3().setFromObject(model)
       const modelHeight = box.max.y - box.min.y
@@ -285,8 +305,9 @@ class TennisCourtBulletTime {
           child.receiveShadow = true
         }
       })
-      player.add(model)
-      this.basePlayerModel = player
+      // player.add(model)
+      // this.basePlayerModel = player
+      this.basePlayerModel = model
       console.log(`✅ ベースプレイヤーの3Dモデル読み込み成功!`)
     //　モデル読み込み失敗時
     } catch (error) {
@@ -299,6 +320,7 @@ class TennisCourtBulletTime {
       playerBox.receiveShadow = true
       player.add(playerBox)
       this.basePlayerModel = player
+      this.baseAnimations = [] // アニメーションなし
       console.warn(`⚠️ ベースプレイヤーの3Dモデル読み込み失敗:`, error)
     }
     this.setupPosition() // ポジション設定
@@ -317,6 +339,18 @@ class TennisCourtBulletTime {
     // プレイヤーの設定
     this.state.players.forEach(p => this.scene.remove(p))
     this.state.players = [] // プレイヤーをリセット
+    // 既存アニメーションを停止とクリーンアップ
+    if (this.playerMixers && this.playerMixers.length > 0) {
+      this.playerMixers.forEach(mixer => {
+        mixer._actions.forEach(action => {
+          if (action.isRunning()) {
+            action.stop()
+          }
+        })
+      })
+    }
+    this.playerMixers = []
+    this.playerActions = []
     // プレイヤーを生成
     for (let i = 0; i < playerPositions.length; i++) {
       const p = playerPositions[i]
@@ -326,6 +360,18 @@ class TennisCourtBulletTime {
       anchor.add(clone)
       anchor.position.set(p.x, p.y, p.z)
       anchor.rotation.y = THREE.MathUtils.degToRad(p.rot || 0)
+      // アニメーションミキサーを追加
+      if (this.idleAnimation) {
+        const mixer = new THREE.AnimationMixer(clone)
+        const action = mixer.clipAction(this.idleAnimation)
+        action.setEffectiveWeight(1)     // ウェイト（重み）を2倍に
+        action.setEffectiveTimeScale(1)  // 再生速度を1倍に
+        action.play()
+        // 配列に追加して管理
+        this.playerMixers.push(mixer)
+        this.playerActions.push(action)
+        console.log(`🎬 プレイヤー${i}: ${this.idleAnimation.name} アニメーション開始`)
+      }
       this.state.players.push(anchor)
       this.scene.add(anchor)
     }
@@ -452,6 +498,12 @@ class TennisCourtBulletTime {
 
   animate = () => {
     const deltaTime = this.clock.getDelta()
+    // すべてのプレイヤーのミキサーを更新
+    if (this.playerMixers && this.playerMixers.length > 0) {
+      this.playerMixers.forEach(mixer => {
+        mixer.update(deltaTime)
+      })
+    }
     // 現在のカメラで描画
     const activeCamera = this.getActiveCamera()
     if (activeCamera) {

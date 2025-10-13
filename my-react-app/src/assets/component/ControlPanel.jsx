@@ -24,6 +24,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SettingsIcon from '@mui/icons-material/Settings';
+import KeyboardIcon from "@mui/icons-material/Keyboard";
 
 
 // 🎨 共通スタイルオブジェクト
@@ -103,23 +104,25 @@ export default function ControlPanel({ state, handle }) {
       <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />} sx={summaryStyle}>
         <Typography variant="subtitle1">操作方法</Typography>
       </AccordionSummary>
-      <AccordionDetails sx={{ bgcolor: 'grey.50', p: 2 }}>
-        <Typography variant="body2" paragraph>
-          🎥 <b>ポジション追加：</b>  
-          JSONファイルをドラッグ＆ドロップ、またはクリックで選択して読み込みます。
+      <AccordionDetails sx={{ p: 2 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center'}}>
+          <KeyboardIcon color="action" sx={{ mr: 1 }} />
+          キー操作
         </Typography>
-        <Typography variant="body2" paragraph>
-          🗑️ <b>削除：</b>  
-          各ポジション右端の <DeleteIcon fontSize="small" /> ボタンをクリックすると削除できます。
-        </Typography>
-        <Typography variant="body2" paragraph>
-          ⚙️ <b>設定：</b>  
-          <SettingsIcon fontSize="small" /> ボタンからポジションの設定を変更できます（※開発予定）。
-        </Typography>
-        <Typography variant="body2">
-          🖱️ <b>選択：</b>  
-          リスト内の項目をクリックすると、そのポジションがアクティブになります。
-        </Typography>
+        <List dense sx={{ pl: 3 }}>
+          <ListItem disableGutters>
+            <ListItemText primary="P：ポジション切替" />
+          </ListItem>
+          <ListItem disableGutters>
+            <ListItemText primary="F：フォーカス切替" />
+          </ListItem>
+          <ListItem disableGutters>
+            <ListItemText primary="R：カメラリセット" />
+          </ListItem>
+          <ListItem disableGutters>
+            <ListItemText primary="⇔：カメラ切替" />
+          </ListItem>
+        </List>
       </AccordionDetails>
     </Accordion>
 
@@ -211,7 +214,13 @@ export default function ControlPanel({ state, handle }) {
     </Accordion>
 
     {/* 📌 ダイアログ */}
-    <Dialog open={open} onClose={handleClose} >
+    <Dialog 
+      open={open}
+      onClose={handleClose}
+      maxWidth={false}
+      PaperProps={{
+        sx: {width: '50vw'}
+      }}>
     <DialogTitle>ポジション追加</DialogTitle>
     <DialogContent>
       {/* ドラッグ&ドロップ / クリック領域 */}
@@ -235,7 +244,7 @@ export default function ControlPanel({ state, handle }) {
           textAlign: "center",
           cursor: "pointer",
           "&:hover": { bgcolor: "grey.300" },
-          width: "50vw"
+          
         }}
         onClick={() => document.getElementById("fileInput").click()}
       >
