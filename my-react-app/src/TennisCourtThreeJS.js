@@ -184,9 +184,26 @@ class TennisCourtBulletTime {
   }
 
   deletePosition(id) {
-    this.state.positions.delete(id)
-    this.state.positionOrder = this.state.positionOrder.filter(pid => pid !== id)
-    this.setupUI() // UI更新
+
+    if (this.state.positions.size <= 1) {
+      throw new Error('最低1つのポジションが必要です')
+    }
+
+    const isCurrentActive = (id === this.getActivePositionId())
+
+    if(isCurrentActive) {
+      const currentIndex = this.state.positionOrder.indexOf(id)
+      const nextIndex = (currentIndex + 1) % this.state.positionOrder.length
+      const nextId = this.state.positionOrder[nextIndex]
+      this.state.positions.delete(id)
+      this.state.positionOrder = this.state.positionOrder.filter(pid => pid !== id)
+      this.setActivePositionId(nextId) //次のIDでポジション更新
+    } else {
+      const currentId = this.getActivePositionId()
+      this.state.positions.delete(id)
+      this.state.positionOrder = this.state.positionOrder.filter(pid => pid !== id)
+      this.setActivePositionId(currentId) // 今のIDでポジション更新
+    }
   }
 
   // ==== ライティング設定 ====

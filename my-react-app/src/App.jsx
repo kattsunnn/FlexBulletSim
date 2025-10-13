@@ -87,7 +87,7 @@ function App() {
       tennisCourtRef.current?.deletePosition?.(id)
     } catch (e) {
       console.error('ポジション削除に失敗:', e)
-      alert('ポジション削除に失敗しました')
+      alert(`削除エラー: ${e.message}`)
     }
   }
 
