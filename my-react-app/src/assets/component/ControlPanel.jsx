@@ -122,6 +122,12 @@ export default function ControlPanel({ state, handle }) {
           <ListItem disableGutters>
             <ListItemText primary="⇔：カメラ切替" />
           </ListItem>
+          <ListItem disableGutters>
+            <ListItemText primary="0：自動再生停止" />
+          </ListItem>
+          <ListItem disableGutters>
+            <ListItemText primary="1~9：秒ごとの自動再生" />
+          </ListItem>
         </List>
       </AccordionDetails>
     </Accordion>

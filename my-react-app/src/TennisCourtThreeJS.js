@@ -32,6 +32,10 @@ class TennisCourtBulletTime {
     this.playerActions = []
     this.baseAnimations = []
     this.idleAnimation = null
+
+    this.autoplayEnabled = false
+    this.looptime = 0
+    this.totalTime = 0
     //デフォルトポジション
     const defaultPositions = [
       { 
@@ -55,7 +59,7 @@ class TennisCourtBulletTime {
           { x: -5.485, y: 0.97, z: 3.24 }, { x: -5.485, y: 0.97, z: 2.49 }, { x: -5.485, y: 0.97, z: 1.74 },
           { x: -5.485, y: 0.97, z: 0.99 }, { x: -5.485, y: 0.97, z: 0.24 }],
         players: [
-          { x: 0, y: 0, z: -5.9 }, { x: 0, y: 0, z: 5.9, rot: 180 }]
+          { x: 0, y: 0, z: 5.9, rot: 180  }, { x: 0, y: 0, z: -5.9}]
       },
       {
         positionName: 'カメラ間隔: 1.5m', 
@@ -70,7 +74,7 @@ class TennisCourtBulletTime {
           { x: -5.485, y: 0.97, z: 7.74 }, { x: -5.485, y: 0.97, z: 6.24 }, { x: -5.485, y: 0.97, z: 4.74 },
           { x: -5.485, y: 0.97, z: 3.24 }, { x: -5.485, y: 0.97, z: 1.74 }, { x: -5.485, y: 0.97, z: 0.24 }],
         players: [
-          { x: 0, y: 0, z: -5.9 }, { x: 0, y: 0, z: 5.9, rot: 180 }]  
+          { x: 0, y: 0, z: 5.9, rot: 180  }, { x: 0, y: 0, z: -5.9}]
       },
       {
         positionName: 'カメラ間隔: 3.0m', 
@@ -81,7 +85,7 @@ class TennisCourtBulletTime {
           { x: -0.63, y: 0.97, z: 11.885 }, { x: -3.63, y: 0.97, z: 11.885 }, { x: -5.485, y: 0.97, z: 10.74 },
           { x: -5.485, y: 0.97, z: 7.74 }, { x: -5.485, y: 0.97, z: 4.74 }, { x: -5.485, y: 0.97, z: 1.74 }],
         players: [
-          { x: 0, y: 0, z: -6.5 }, { x: 0, y: 0, z: 6.5, rot: 180 }]      
+          { x: 0, y: 0, z: 5.9, rot: 180  }, { x: 0, y: 0, z: -5.9}]    
       }
     ]
     // デフォルトポジション登録
@@ -393,62 +397,75 @@ class TennisCourtBulletTime {
       this.scene.add(anchor)
     }
     // カメラの設定
-    this.state.cameras.forEach(c => this.scene.remove(c))
+    this.state.cameras.forEach(c => this.scene.remove(c)) // シーンから既存カメラを削除
     this.state.cameras = [] // カメラをリセット
     this.setActiveCameraId(0) // アクティブカメラをリセット
     this.setActiveFocusId(0) //アクティブフォーカスをリセット
     const focus = this.getActiveFocus() // 視線方向を最初のプレイヤーに設定
-    const baseFOV = 60 // FOVを設定
-    const baseDistance = 7 // 基準距離
-    const baseH = 2 * baseDistance * Math.tan(THREE.MathUtils.degToRad(baseFOV) / 2)  // 基準距離での高さ
     // カメラの生成
     for (let i = 0; i < cameraPositions.length; i++) {
       const pos = cameraPositions[i]
       const camera = new THREE.PerspectiveCamera(
-        baseFOV,
+        60,
         window.innerWidth / window.innerHeight,
         0.1,
         1000
       )
       camera.position.set(pos.x, pos.y, pos.z) // カメラの位置設定
-      // 自動FOV調整
-      if (autoScaleFOV) {
-        const distance = camera.position.distanceTo(focus);
-        const scaledFOV = 2 * Math.atan(baseH / (2 * distance));
-        camera.fov = THREE.MathUtils.radToDeg(scaledFOV);
-        camera.updateProjectionMatrix();
-      } else {
-        camera.fov = baseFOV
-        camera.updateProjectionMatrix();
-      }
-      camera.lookAt(focus) // カメラの視線設定
       this.state.cameras.push(camera) // カメラを配列に追加
       this.scene.add(camera) // シーンに追加
     }
+    // 最初のフォーカス設定
+    this.setFocus()
+    // FOVモードの適用
+    if (autoScaleFOV) {
+      this.enableAutoFOV()
+    } else {
+      this.disableAutoFOV()
+    }
+
     console.log("ポジション配置完了:", activePosition.positionName)
   }
   // フォーカスを切り替え
   changeFocus(){
-    const activeFocus = this.getActiveFocus()
+    this.setFocus()
+    // FOVモードの適用
     const autoScaleFOV = this.getActivePosition().autoScaleFOV
+    if (autoScaleFOV) {
+      this.enableAutoFOV()
+    } else {
+      this.disableAutoFOV()
+    }
+  }
 
+  setFocus(){
+    //視線方向切替
+    const activeFocus = this.getActiveFocus()
     this.state.cameras.forEach(cam => {
-      if (autoScaleFOV) {
-        const baseFOV = 60 // FOVを設定
-        const baseDistance = 7 // 基準距離
-        const baseH = 2 * baseDistance * Math.tan(THREE.MathUtils.degToRad(baseFOV) / 2)  // 基準距離での高さ
+        cam.lookAt(activeFocus)
+    })
+  }
+
+  enableAutoFOV() {
+    const activeFocus = this.getActiveFocus()
+    const baseFOV = 60 // FOVを設定
+    const baseDistance = 3 // 基準距離
+    const baseH = 2 * baseDistance * Math.tan(THREE.MathUtils.degToRad(baseFOV) / 2)  // 基準距離での高さ
+    this.state.cameras.forEach(cam => {
         const distance = cam.position.distanceTo(activeFocus);
         const scaledFOV = 2 * Math.atan(baseH / (2 * distance));
         cam.fov = THREE.MathUtils.radToDeg(scaledFOV);
         cam.updateProjectionMatrix();
-      } else {
-        cam.fov = 60
-        cam.updateProjectionMatrix();
-      }
-
-      cam.lookAt(activeFocus)
     })
   }
+  
+  disableAutoFOV() {
+    this.state.cameras.forEach(cam => {
+        cam.fov = 60
+        cam.updateProjectionMatrix();
+    })
+  }
+
   // フォーカスモードの切り替え
   toggleFOVMode(id) {
     this.state.positions.get(id).autoScaleFOV = !this.state.positions.get(id).autoScaleFOV
@@ -457,6 +474,13 @@ class TennisCourtBulletTime {
     }
     this.setupUI()
   }
+
+  setAutoPlayEnabled = (time) => {
+    this.totalTime = 0
+    this.autoplayEnabled = time > 0
+    this.looptime = time
+  }
+
   // UIを更新
   setupUI() {
     const progress = ((this.getActiveCameraId() + 1) / this.state.cameras.length) * 100
@@ -490,6 +514,46 @@ class TennisCourtBulletTime {
         case 'KeyF':
           this.setActiveFocusId((this.getActiveFocusId() + 1) % this.state.players.length)
           break
+        case 'Digit0':
+        case 'Numpad0':
+          this.setAutoPlayEnabled(0)
+          break
+        case 'Digit1':
+        case 'Numpad1':
+          this.setAutoPlayEnabled(1)
+          break
+        case 'Digit2':
+        case 'Numpad2':
+          this.setAutoPlayEnabled(2)
+          break
+        case 'Digit3':
+        case 'Numpad3':
+          this.setAutoPlayEnabled(3)
+          break
+        case 'Digit4':
+        case 'Numpad4':
+          this.setAutoPlayEnabled(4)
+          break
+        case 'Digit5':
+        case 'Numpad5':
+          this.setAutoPlayEnabled(5)
+          break
+        case 'Digit6':
+        case 'Numpad6':
+          this.setAutoPlayEnabled(6)
+          break
+        case 'Digit7':
+        case 'Numpad7':
+          this.setAutoPlayEnabled(7)
+          break
+        case 'Digit8':
+        case 'Numpad8':
+          this.setAutoPlayEnabled(8)
+          break
+        case 'Digit9':
+        case 'Numpad9':
+          this.setAutoPlayEnabled(9)
+          break
       }
     }
 
@@ -515,6 +579,19 @@ class TennisCourtBulletTime {
 
   animate = () => {
     const deltaTime = this.clock.getDelta()
+
+    if(this.autoplayEnabled && this.state.cameras.length > 0) {
+      const numOfCams = this.state.cameras.length
+      const totalStep = (numOfCams*2)-2 // カメラ台数（往復）
+      const timePerStep = this.looptime / totalStep
+      this.totalTime += deltaTime
+      const currentStep = Math.floor((this.totalTime % this.looptime) / timePerStep)
+      const nextCameraId = currentStep < numOfCams ? currentStep : (totalStep - currentStep)
+      if(this.getActiveCameraId() !== nextCameraId) {
+        this.setActiveCameraId(nextCameraId)
+      }
+    }
+
     // すべてのプレイヤーのミキサーを更新
     if (this.playerMixers && this.playerMixers.length > 0) {
       this.playerMixers.forEach(mixer => {
